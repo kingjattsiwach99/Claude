@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>India Overseas Station · Testing Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<!-- Google Identity Services -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f5f7;--surface:#fff;--border:#e2e4e9;--text:#111827;--muted:#6b7280;--dim:#9ca3af;
+  --blue:#2563eb;--green:#16a34a;--amber:#d97706;--red:#dc2626;--purple:#9333ea;--teal:#0d9488;
+  --blue-bg:#eff6ff;--green-bg:#f0fdf4;--red-bg:#fff1f2;--teal-bg:#f0fdfa;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+input,select,textarea{font-family:'DM Sans',sans-serif;font-size:13.5px;color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 11px;outline:none;width:100%;box-sizing:border-box;transition:border-color .15s,background .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+textarea{resize:vertical;min-height:72px}
+select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px}
+button{font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s}
+table{width:100%;border-collapse:collapse}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+@media print{.no-print{display:none!important}body{background:#fff}nav{position:static!important}}
+
+/* Auth overlay */
+#authOverlay{position:fixed;inset:0;background:rgba(17,24,39,.85);backdrop-filter:blur(6px);z-index:1000;display:flex;align-items:center;justify-content:center}
+#authCard{background:#fff;border-radius:18px;padding:40px 44px;max-width:420px;width:90%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.2)}
+#authCard .logo{width:52px;height:52px;border-radius:13px;background:linear-gradient(135deg,#1e40af,#2563eb);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#fff;margin:0 auto 18px}
+#authCard h2{font-size:20px;font-weight:700;margin-bottom:6px;color:#111827}
+#authCard p{font-size:13.5px;color:#6b7280;margin-bottom:24px;line-height:1.5}
+#authCard .divider{font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;margin:18px 0;position:relative}
+#authCard .divider::before,#authCard .divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:#e2e4e9}
+#authCard .divider::before{left:0}#authCard .divider::after{right:0}
+.gsi-container{display:flex;justify-content:center}
+.view-only-btn{display:block;width:100%;padding:11px;border-radius:8px;background:transparent;border:1px solid #e2e4e9;color:#6b7280;font-size:13px;font-weight:500;margin-top:10px;cursor:pointer}
+.view-only-btn:hover{background:#f4f5f7}
+
+/* Share modal */
+#shareModal{position:fixed;inset:0;background:rgba(17,24,39,.7);backdrop-filter:blur(4px);z-index:999;display:none;align-items:center;justify-content:center}
+#shareModal.open{display:flex}
+#shareCard{background:#fff;border-radius:14px;padding:28px 32px;max-width:500px;width:90%;box-shadow:0 16px 48px rgba(0,0,0,.18)}
+#shareCard h3{font-size:17px;font-weight:700;margin-bottom:4px}
+#shareCard p{font-size:13px;color:#6b7280;margin-bottom:18px}
+#shareUrlBox{display:flex;gap:8px;align-items:center}
+#shareUrlInput{flex:1;font-family:'JetBrains Mono',monospace;font-size:11.5px;background:#f4f5f7;border:1px solid #e2e4e9;border-radius:7px;padding:9px 12px;color:#374151}
+.copy-btn{padding:9px 16px;border-radius:7px;background:var(--blue);color:#fff;border:none;font-size:13px;font-weight:600;white-space:nowrap}
+.close-btn{display:block;margin-top:16px;padding:9px;border-radius:7px;background:transparent;border:1px solid #e2e4e9;color:#6b7280;font-size:13px;width:100%}
+
+/* User chip */
+#userChip{display:none;align-items:center;gap:8px;background:#f4f5f7;border:1px solid #e2e4e9;border-radius:8px;padding:5px 10px}
+#userAvatar{width:26px;height:26px;border-radius:50%;object-fit:cover}
+#userName{font-size:12px;font-weight:600;color:#374151;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#signOutBtn{font-size:11px;color:#9ca3af;background:none;border:none;cursor:pointer;padding:0 0 0 4px}
+#signOutBtn:hover{color:#dc2626}
+
+/* Read-only banner */
+#readOnlyBanner{display:none;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#92400e;align-items:center;gap:8px}
+
+/* Storage indicator */
+#storageBar{display:flex;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#6b7280;background:#f4f5f7;padding:5px 12px;border-radius:6px;border:1px solid #e2e4e9}
+#syncDot{width:7px;height:7px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<!-- AUTH OVERLAY -->
+<div id="authOverlay">
+  <div id="authCard">
+    <div class="logo">IOS</div>
+    <h2>India Overseas Station</h2>
+    <p>Sign in with Google to save your testing report to Google Drive and share it with your team.</p>
+
+    <!-- Google One Tap / Sign-In Button -->
+    <div class="gsi-container">
+      <div id="g_id_onload"
+           data-client_id="766232425829-fsis8d4q5hpe67jv7fiajm3468l9d4rl.apps.googleusercontent.com"
+           data-callback="handleGoogleCredential"
+           data-auto_prompt="false">
+      </div>
+      <div class="g_id_signin"
+           data-type="standard"
+           data-size="large"
+           data-theme="outline"
+           data-text="signin_with"
+           data-shape="rectangular"
+           data-logo_alignment="left">
+      </div>
+    </div>
+
+    <div class="divider">or</div>
+    <button class="view-only-btn" onclick="enterViewOnly()">👁 View shared link without signing in</button>
+    <p style="font-size:11px;color:#d1d5db;margin-top:14px;margin-bottom:0">Your data stays in your own Google Drive. We never see your files.</p>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div id="shareModal">
+  <div id="shareCard">
+    <h3>🔗 Share This Dashboard</h3>
+    <p>Anyone with this link can view and edit the report in real time. The data is stored in your Google Drive.</p>
+    <div id="shareUrlBox">
+      <input type="text" id="shareUrlInput" readonly value="Generating link…"/>
+      <button class="copy-btn" onclick="copyShareUrl()">Copy</button>
+    </div>
+    <p id="driveNote" style="font-size:11.5px;color:#9ca3af;margin-top:10px;margin-bottom:0"></p>
+    <button class="close-btn" onclick="closeShareModal()">Close</button>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav style="background:#fff;border-bottom:1px solid #e2e4e9;display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:60px;box-shadow:0 1px 6px rgba(0,0,0,.06);position:sticky;top:0;z-index:100;gap:12px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:11px">
+    <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,#1e40af,#2563eb);display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">IOS</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#111827;letter-spacing:.1px">INDIA OVERSEAS STATION TESTING REPORT</div>
+      <div style="font-size:11px;color:#6b7280" id="navSubtitle">Loading…</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+    <div id="storageBar">
+      <span id="syncDot"></span>
+      <span id="syncLabel">Loading…</span>
+      <span id="testerBadge" style="color:var(--blue);font-weight:700;margin-left:4px"></span>
+    </div>
+    <div id="userChip">
+      <img id="userAvatar" src="" alt=""/>
+      <span id="userName"></span>
+      <button id="signOutBtn" onclick="signOut()" title="Sign out">✕</button>
+    </div>
+  </div>
+
+  <div class="no-print" style="display:flex;gap:8px;flex-shrink:0">
+    <button onclick="openShareModal()" style="padding:7px 13px;border-radius:7px;background:transparent;color:var(--blue);border:1px solid #bfdbfe;font-size:13px;font-weight:500">🔗 Share</button>
+    <button onclick="resetAll()" style="padding:7px 13px;border-radius:7px;background:transparent;color:var(--red);border:1px solid #fecaca;font-size:13px;font-weight:500">↺ Reset</button>
+    <button onclick="window.print()" style="padding:7px 13px;border-radius:7px;background:transparent;color:var(--muted);border:1px solid var(--border);font-size:13px;font-weight:500">⎙ Print</button>
+    <button onclick="exportJSON()" style="padding:7px 13px;border-radius:7px;background:var(--blue);color:#fff;border:none;font-size:13px;font-weight:500">↓ Export JSON</button>
+  </div>
+</nav>
+
+<div style="max-width:1060px;margin:0 auto;padding:22px 16px 60px">
+
+  <!-- READ ONLY BANNER -->
+  <div id="readOnlyBanner">
+    ⚠️ <span>You are viewing a <strong>shared read-only</strong> report. Sign in with Google to edit and save your own copy.</span>
+    <button onclick="document.getElementById('authOverlay').style.display='flex'" style="margin-left:auto;padding:5px 12px;border-radius:6px;background:#fbbf24;color:#78350f;border:none;font-size:12px;font-weight:600;cursor:pointer">Sign In</button>
+  </div>
+
+  <!-- SHARED NOTICE -->
+  <div id="sharedNotice" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 16px;margin-bottom:16px;display:none;align-items:center;gap:10px;font-size:13px;color:#1d4ed8">
+    🔗 <span><strong>Live shared dashboard</strong> — Edits are saved to Google Drive and visible to everyone with the share link.</span>
+  </div>
+
+  <!-- HEADER CARD -->
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px">Report Information</div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid #f1f3f5">
+      <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px">📋 Report Header</div>
+      <span id="saveStatus" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green)">✓ Saved</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+      <div><label class="lbl">Report Date</label><input type="date" id="reportDate" oninput="autoSave()"/></div>
+      <div><label class="lbl">Tester Name</label><input type="text" id="testerName" placeholder="Enter your name…" oninput="syncTester();autoSave()"/></div>
+      <div><label class="lbl">Total Execution Time</label><input type="text" id="execTime" placeholder="e.g. 7h 30m" oninput="autoSave()"/></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div><label class="lbl">Observations / Notes</label><textarea id="observations" placeholder="Summarise today's observations, blockers, findings…" oninput="autoSave()"></textarea></div>
+      <div><label class="lbl">Tomorrow's Plan</label><textarea id="tomorrowPlan" placeholder="Outline planned tasks and targets for the next session…" oninput="autoSave()"></textarea></div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;margin-top:22px">Summary</div>
+  <div id="kpiGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:18px">
+    <div style="background:#fff;border:1px solid var(--border);border-top:3px solid var(--blue);border-radius:12px;padding:15px 17px"><div id="kpiTotal" style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--blue);line-height:1;margin-bottom:5px">0</div><div style="font-size:12px;font-weight:500;color:var(--muted)">Total Tasks</div></div>
+    <div style="background:#fff;border:1px solid var(--border);border-top:3px solid var(--green);border-radius:12px;padding:15px 17px"><div id="kpiCompleted" style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--green);line-height:1;margin-bottom:5px">0</div><div style="font-size:12px;font-weight:500;color:var(--muted)">Completed</div></div>
+    <div style="background:#fff;border:1px solid var(--border);border-top:3px solid var(--amber);border-radius:12px;padding:15px 17px"><div id="kpiInProg" style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--amber);line-height:1;margin-bottom:5px">0</div><div style="font-size:12px;font-weight:500;color:var(--muted)">In Progress</div></div>
+    <div style="background:#fff;border:1px solid var(--border);border-top:3px solid var(--red);border-radius:12px;padding:15px 17px"><div id="kpiFailed" style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--red);line-height:1;margin-bottom:5px">0</div><div style="font-size:12px;font-weight:500;color:var(--muted)">Failed Tasks</div></div>
+    <div style="background:#fff;border:1px solid var(--border);border-top:3px solid var(--purple);border-radius:12px;padding:15px 17px"><div id="kpiDefects" style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--purple);line-height:1;margin-bottom:5px">0</div><div style="font-size:12px;font-weight:500;color:var(--muted)">Total Defects</div></div>
+  </div>
+
+  <!-- TASKS -->
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;margin-top:22px">Today's Tasks</div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid #f1f3f5">
+      <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px">🗂️ Task Log</div>
+    </div>
+    <div class="no-print" id="addBtns" style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+      <button onclick="addTask('half')" style="flex:1;min-width:150px;padding:11px 16px;border-radius:8px;background:transparent;color:var(--blue);border:2px dashed #93c5fd;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px">＋ Add Half Day Task <span style="font-size:11px;opacity:.7">09:00–13:00</span></button>
+      <button onclick="addTask('full')" style="flex:1;min-width:150px;padding:11px 16px;border-radius:8px;background:transparent;color:var(--green);border:2px dashed #86efac;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px">＋ Add Full Day Task <span style="font-size:11px;opacity:.7">09:00–18:00</span></button>
+    </div>
+    <div id="taskList"></div>
+    <div id="taskEmpty" style="text-align:center;padding:36px 20px;color:var(--dim);display:none"><div style="font-size:34px;margin-bottom:8px">📭</div><div style="font-weight:600;font-size:14px">No tasks added yet</div><div style="font-size:12px;margin-top:4px">Use the buttons above to log a task.</div></div>
+  </div>
+
+  <!-- SUMMARY TABLE -->
+  <div style="font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;margin-top:22px">Task Summary Table</div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:0 1px 4px rgba(0,0,0,.05);margin-bottom:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:13px;border-bottom:1px solid #f1f3f5">
+      <div style="font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px">📊 Task Summary</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table id="summaryTable">
+        <thead><tr style="background:#f4f5f7">
+          <th class="th">#</th><th class="th">Task Name</th><th class="th">Task Type</th><th class="th">Slot</th>
+          <th class="th">Progress</th><th class="th">Status</th><th class="th">Issue ID</th><th class="th">Jira Link</th><th class="th">Defects</th>
+        </tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+      <div id="tableEmpty" style="text-align:center;padding:36px 20px;color:var(--dim);display:none"><div style="font-size:32px;margin-bottom:8px">🗃️</div><div style="font-weight:600;font-size:14px">No task data to display</div><div style="font-size:12px;margin-top:4px">Tasks will appear here once added.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" style="position:fixed;bottom:26px;right:22px;background:#1e293b;color:#fff;padding:10px 18px;border-radius:9px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.2);opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none"></div>
+
+<style>
+.lbl{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);display:block;margin-bottom:4px}
+.th{text-align:left;padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);white-space:nowrap}
+</style>
+
+<script>
+// ════════════════════════════════════════════════════
+// CONFIGURATION — replace with your own Google Client ID
+// Get one at: https://console.cloud.google.com/apis/credentials
+// Enable: Google Drive API + Google Identity Services
+// Authorized origins: your hosting domain (or * for local testing)
+// ════════════════════════════════════════════════════
+const GOOGLE_CLIENT_ID = '766232425829-fsis8d4q5hpe67jv7fiajm3468l9d4rl.apps.googleusercontent.com';
+const DRIVE_FILENAME   = 'ios-testing-dashboard.json';
+const DRIVE_MIME       = 'application/json';
+const GAME_KW = ['game','game test','gaming','gameplay','game testing'];
+
+// State
+let tasks = [], taskIdCtr = 0, saveTimer = null;
+let accessToken = null, driveFileId = null;
+let isReadOnly = false, isSignedIn = false;
+
+// ────────────────────────────────────────────────────
+// UTILITY
+// ────────────────────────────────────────────────────
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function esc(s){ if(!s)return''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function $id(id){ return document.getElementById(id); }
+function showToast(msg){
+  const t=$id('toast');t.textContent=msg;t.style.opacity='1';t.style.transform='translateY(0)';
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(8px)'},2800);
+}
+function setSyncLabel(text,ok){
+  $id('syncDot').style.background = ok ? '#16a34a' : '#f59e0b';
+  $id('syncLabel').textContent = text;
+}
+
+// ────────────────────────────────────────────────────
+// GOOGLE IDENTITY SERVICES — sign in
+// ────────────────────────────────────────────────────
+function handleGoogleCredential(response){
+  // Exchange ID token for access token via OAuth2 implicit flow
+  // We use the token hint to auto-approve Drive scope
+  startOAuthFlow();
+}
+
+function startOAuthFlow(){
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: 'https://www.googleapis.com/auth/drive.file openid profile email',
+    callback: async (tokenResponse) => {
+      if(tokenResponse.error){ showToast('Auth failed: '+tokenResponse.error); return; }
+      accessToken = tokenResponse.access_token;
+      await onSignedIn();
+    }
+  });
+  client.requestAccessToken();
+}
+
+async function onSignedIn(){
+  isSignedIn = true;
+  isReadOnly = false;
+
+  // Fetch user profile
+  try {
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+accessToken}});
+    const u = await r.json();
+    $id('userAvatar').src = u.picture||'';
+    $id('userName').textContent = u.name||u.email||'User';
+    $id('userChip').style.display='flex';
+  } catch(e){}
+
+  $id('authOverlay').style.display = 'none';
+  $id('addBtns').style.display = 'flex';
+  $id('readOnlyBanner').style.display = 'none';
+
+  // Check if we were opened via a share link
+  const shareId = new URLSearchParams(window.location.search).get('share');
+  if(shareId){
+    driveFileId = shareId;
+    await loadFromDrive(shareId);
+    $id('sharedNotice').style.display = 'flex';
+    $id('navSubtitle').textContent = 'Shared Live Dashboard · Anyone with the link can edit';
+  } else {
+    // Find or create user's own file
+    await findOrCreateDriveFile();
+    $id('navSubtitle').textContent = 'Your Dashboard · Synced to Google Drive';
+  }
+
+  renderAll();
+  setSyncLabel('Synced to Drive', true);
+}
+
+function signOut(){
+  google.accounts.oauth2.revoke(accessToken, ()=>{});
+  accessToken = null; driveFileId = null; isSignedIn = false;
+  $id('userChip').style.display='none';
+  $id('authOverlay').style.display='flex';
+  tasks=[]; taskIdCtr=0;
+  renderAll();
+}
+
+function enterViewOnly(){
+  const shareId = new URLSearchParams(window.location.search).get('share');
+  if(!shareId){
+    showToast('No share ID in URL. Get a link from the dashboard owner.');
+    return;
+  }
+  isReadOnly = true;
+  $id('authOverlay').style.display='none';
+  $id('readOnlyBanner').style.display='flex';
+  $id('addBtns').style.display='none';
+  $id('navSubtitle').textContent = 'View Only · Sign in to edit';
+  loadPublicDriveFile(shareId);
+}
+
+// ────────────────────────────────────────────────────
+// GOOGLE DRIVE API
+// ────────────────────────────────────────────────────
+async function driveGet(url, opts={}){
+  const r = await fetch(url, {headers:{Authorization:'Bearer '+accessToken}, ...opts});
+  if(!r.ok) throw new Error('Drive API '+r.status);
+  return r.json();
+}
+
+async function findOrCreateDriveFile(){
+  // Search for existing file
+  try {
+    const q = encodeURIComponent(`name='${DRIVE_FILENAME}' and mimeType='${DRIVE_MIME}' and trashed=false`);
+    const res = await driveGet(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&spaces=drive`);
+    if(res.files && res.files.length > 0){
+      driveFileId = res.files[0].id;
+      await loadFromDrive(driveFileId);
+      return;
+    }
+  } catch(e){}
+
+  // Create new file with empty state
+  await saveToDrive(buildState());
+}
+
+async function loadFromDrive(fileId){
+  try {
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      {headers:{Authorization:'Bearer '+accessToken}});
+    if(!r.ok) return;
+    const d = await r.json();
+    applyState(d);
+  } catch(e){ console.warn('Load failed',e); }
+}
+
+async function loadPublicDriveFile(fileId){
+  // Try public (anyone with link) access — no auth needed
+  setSyncLabel('Loading…', false);
+  try {
+    // Use web content link — works only if owner shared the file publicly
+    const url = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('not public');
+    const text = await r.text();
+    const d = JSON.parse(text);
+    applyState(d);
+    renderAll();
+    setSyncLabel('View only', true);
+    showToast('Loaded shared report (read-only)');
+  } catch(e){
+    showToast('Could not load: file may not be public. Ask the owner for access.');
+    setSyncLabel('Load failed', false);
+  }
+}
+
+async function saveToDrive(data){
+  const body = JSON.stringify(data, null, 2);
+  if(!driveFileId){
+    // Create
+    const meta = {name: DRIVE_FILENAME, mimeType: DRIVE_MIME};
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(meta)],{type:'application/json'}));
+    form.append('file', new Blob([body],{type:DRIVE_MIME}));
+    const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+      {method:'POST',headers:{Authorization:'Bearer '+accessToken},body:form});
+    if(!r.ok) throw new Error('Create failed '+r.status);
+    const f = await r.json();
+    driveFileId = f.id;
+    return f.id;
+  } else {
+    // Update
+    await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`,
+      {method:'PATCH',headers:{Authorization:'Bearer '+accessToken,'Content-Type':DRIVE_MIME},body});
+    return driveFileId;
+  }
+}
+
+async function makeFilePublic(fileId){
+  await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,{
+    method:'POST',
+    headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
+    body: JSON.stringify({role:'reader',type:'anyone'})
+  });
+}
+
+// ────────────────────────────────────────────────────
+// STATE
+// ────────────────────────────────────────────────────
+function buildState(){
+  return {
+    reportDate: $id('reportDate').value,
+    testerName: $id('testerName').value,
+    execTime:   $id('execTime').value,
+    observations: $id('observations').value,
+    tomorrowPlan: $id('tomorrowPlan').value,
+    tasks, taskIdCtr
+  };
+}
+
+function applyState(d){
+  if(d.reportDate) $id('reportDate').value = d.reportDate;
+  if(d.testerName){ $id('testerName').value = d.testerName; syncTester(); }
+  if(d.execTime)   $id('execTime').value = d.execTime;
+  if(d.observations) $id('observations').value = d.observations;
+  if(d.tomorrowPlan) $id('tomorrowPlan').value = d.tomorrowPlan;
+  if(Array.isArray(d.tasks)) tasks = d.tasks;
+  if(d.taskIdCtr) taskIdCtr = d.taskIdCtr;
+}
+
+// ────────────────────────────────────────────────────
+// AUTO SAVE
+// ────────────────────────────────────────────────────
+function autoSave(){
+  if(isReadOnly) return;
+  clearTimeout(saveTimer);
+  $id('saveStatus').textContent = '⏳ Saving…';
+  $id('saveStatus').style.color = '#d97706';
+  setSyncLabel('Saving…', false);
+  saveTimer = setTimeout(async()=>{
+    try {
+      if(isSignedIn){
+        await saveToDrive(buildState());
+        $id('saveStatus').textContent = '✓ Saved to Drive';
+        $id('saveStatus').style.color = '#16a34a';
+        setSyncLabel('Synced '+new Date().toLocaleTimeString(), true);
+      } else {
+        // Fallback: localStorage only (view-only or no auth)
+        localStorage.setItem('ios_dashboard_local', JSON.stringify(buildState()));
+        $id('saveStatus').textContent = '✓ Saved locally';
+        $id('saveStatus').style.color = '#d97706';
+        setSyncLabel('Local only', false);
+      }
+    } catch(e){
+      $id('saveStatus').textContent = '⚠ Save failed';
+      $id('saveStatus').style.color = '#dc2626';
+      setSyncLabel('Save failed', false);
+    }
+  }, 800);
+}
+
+// ────────────────────────────────────────────────────
+// SHARE MODAL
+// ────────────────────────────────────────────────────
+async function openShareModal(){
+  $id('shareModal').classList.add('open');
+  $id('shareUrlInput').value = 'Preparing link…';
+  $id('driveNote').textContent = '';
+
+  if(!isSignedIn){
+    $id('shareUrlInput').value = 'Sign in with Google to generate a share link.';
+    return;
+  }
+
+  try {
+    // Save latest state first
+    const fid = await saveToDrive(buildState());
+    // Make file publicly readable
+    await makeFilePublic(fid);
+    // Build share URL
+    const base = window.location.href.split('?')[0];
+    const shareUrl = `${base}?share=${fid}`;
+    $id('shareUrlInput').value = shareUrl;
+    $id('driveNote').textContent = '✅ File is publicly readable via Google Drive. Anyone with this link can view and edit.';
+  } catch(e){
+    $id('shareUrlInput').value = 'Error generating link. Check Drive permissions.';
+    $id('driveNote').textContent = String(e);
+  }
+}
+
+function closeShareModal(){ $id('shareModal').classList.remove('open'); }
+
+function copyShareUrl(){
+  const v = $id('shareUrlInput').value;
+  navigator.clipboard.writeText(v).then(()=>showToast('Link copied to clipboard!')).catch(()=>{
+    $id('shareUrlInput').select(); document.execCommand('copy'); showToast('Copied!');
+  });
+}
+
+// ────────────────────────────────────────────────────
+// TASK MANAGEMENT
+// ────────────────────────────────────────────────────
+function addTask(type){
+  if(isReadOnly){ showToast('Sign in to add tasks.'); return; }
+  const t={id:++taskIdCtr,type,time:type==='half'?'09:00–13:00':'09:00–18:00',name:'',taskType:'',progress:'inprogress',taskStatus:'pass',notes:'',issueId:'',jiraLink:'',gameMode:false,reportStatus:'pass',build:'',totalCases:'',executed:'',passRate:'',defects:'',blocking:'',bugIds:''};
+  tasks.push(t); renderAll(); autoSave();
+}
+
+function deleteTask(id){
+  if(!confirm('Remove this task?')) return;
+  tasks = tasks.filter(t=>t.id!==id); renderAll(); autoSave();
+}
+
+function setTaskField(id,field,val){
+  const t = tasks.find(t=>t.id===id);
+  if(!t) return;
+  t[field]=val;
+  if(field==='name') t.gameMode=GAME_KW.some(k=>val.trim().toLowerCase().includes(k));
+  if(field==='taskStatus') $id('failPanel-'+id).style.display=val==='fail'?'block':'none';
+  if(field==='name') $id('gamePanel-'+id).style.display=t.gameMode?'block':'none';
+  renderTable(); recalc(); autoSave();
+}
+
+function syncTester(){
+  const v=$id('testerName').value.trim();
+  $id('testerBadge').textContent=v?'· '+v:'';
+}
+
+// ────────────────────────────────────────────────────
+// RENDER
+// ────────────────────────────────────────────────────
+function renderAll(){ renderTasks(); renderTable(); recalc(); }
+
+function renderTasks(){
+  const list=$id('taskList'), empty=$id('taskEmpty');
+  list.innerHTML='';
+  if(!tasks.length){ empty.style.display='block'; return; }
+  empty.style.display='none';
+  tasks.forEach(t=>{
+    const isHalf=t.type==='half';
+    const div=document.createElement('div');
+    div.style.cssText='border:1px solid #e2e4e9;border-radius:11px;overflow:hidden;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04)';
+    const ro = isReadOnly ? 'disabled' : '';
+    div.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 15px;background:${isHalf?'#eff6ff':'#f0fdf4'}">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.5px;color:${isHalf?'#2563eb':'#16a34a'};display:flex;align-items:center;gap:6px">
+          ${isHalf?'◑ HALF DAY':'● FULL DAY'} <span style="font-size:10.5px;color:#9ca3af">&nbsp;${t.time}</span>
+        </div>
+        ${!isReadOnly?`<button onclick="deleteTask(${t.id})" class="no-print" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:15px;padding:2px 6px;border-radius:4px" title="Remove">✕</button>`:''}
+      </div>
+      <div style="padding:15px;background:#fff">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+          <div><label class="lbl">Task Name</label><input type="text" ${ro} value="${esc(t.name)}" placeholder="e.g. Game Test, Regression, Smoke…" oninput="setTaskField(${t.id},'name',this.value)"/></div>
+          <div><label class="lbl">Task Type</label><input type="text" ${ro} value="${esc(t.taskType)}" placeholder="e.g. Functional, Regression, Exploratory…" oninput="setTaskField(${t.id},'taskType',this.value)"/></div>
+          <div><label class="lbl">Task Progress</label>
+            <select ${ro} onchange="setTaskField(${t.id},'progress',this.value)">
+              <option value="completed" ${t.progress==='completed'?'selected':''}>✅ Completed</option>
+              <option value="inprogress" ${t.progress==='inprogress'?'selected':''}>🔄 In Progress</option>
+            </select></div>
+          <div><label class="lbl">Task Status</label>
+            <select ${ro} onchange="setTaskField(${t.id},'taskStatus',this.value)" style="color:${t.taskStatus==='fail'?'#dc2626':'#16a34a'};font-weight:700">
+              <option value="pass" ${t.taskStatus==='pass'?'selected':''}>✅ Pass</option>
+              <option value="fail" ${t.taskStatus==='fail'?'selected':''}>❌ Fail</option>
+            </select></div>
+          <div style="grid-column:1/-1"><label class="lbl">Notes</label><textarea style="min-height:60px" ${ro} placeholder="Task-specific notes…" oninput="setTaskField(${t.id},'notes',this.value)">${esc(t.notes)}</textarea></div>
+        </div>
+        <div id="failPanel-${t.id}" style="margin-top:2px;padding:13px;border-radius:8px;background:#fff1f2;border:1px solid #fecaca;display:${t.taskStatus==='fail'?'block':'none'}">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:5px">❌ Failure Details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div><label class="lbl">Issue ID</label><input type="text" ${ro} value="${esc(t.issueId)}" placeholder="e.g. BUG-1042, DEF-209…" oninput="setTaskField(${t.id},'issueId',this.value)"/></div>
+            <div><label class="lbl">Jira Link</label><input type="url" ${ro} value="${esc(t.jiraLink)}" placeholder="https://jira.yourcompany.com/browse/…" oninput="setTaskField(${t.id},'jiraLink',this.value)"/></div>
+          </div>
+        </div>
+        <div id="gamePanel-${t.id}" style="margin-top:10px;padding:13px;border-radius:8px;background:#f0fdfa;border:1px solid #99f6e4;display:${t.gameMode?'block':'none'}">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:#0d9488;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🎮 Advanced Testing Fields</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div><label class="lbl">Report Status</label>
+              <select ${ro} onchange="setTaskField(${t.id},'reportStatus',this.value)">
+                <option value="pass" ${t.reportStatus==='pass'?'selected':''}>✅ Pass</option>
+                <option value="fail" ${t.reportStatus==='fail'?'selected':''}>❌ Fail</option>
+                <option value="inprogress" ${t.reportStatus==='inprogress'?'selected':''}>🔄 In Progress</option>
+              </select></div>
+            <div><label class="lbl">Build / Version</label><input type="text" ${ro} value="${esc(t.build)}" placeholder="e.g. v1.4.2-rc1" oninput="setTaskField(${t.id},'build',this.value)"/></div>
+            <div><label class="lbl">Total Test Cases</label><input type="number" ${ro} value="${esc(t.totalCases)}" min="0" oninput="setTaskField(${t.id},'totalCases',this.value)"/></div>
+            <div><label class="lbl">Cases Executed</label><input type="number" ${ro} value="${esc(t.executed)}" min="0" oninput="setTaskField(${t.id},'executed',this.value)"/></div>
+            <div><label class="lbl">Pass Rate (%)</label><input type="text" ${ro} value="${esc(t.passRate)}" placeholder="e.g. 94%" oninput="setTaskField(${t.id},'passRate',this.value)"/></div>
+            <div><label class="lbl">Valid Defects Submitted</label><input type="number" ${ro} value="${esc(t.defects)}" min="0" oninput="setTaskField(${t.id},'defects',this.value)"/></div>
+            <div><label class="lbl">Blocking Issues</label><input type="text" ${ro} value="${esc(t.blocking)}" placeholder="e.g. 2 critical blockers" oninput="setTaskField(${t.id},'blocking',this.value)"/></div>
+            <div style="grid-column:2/-1"><label class="lbl">Bug IDs</label><input type="text" ${ro} value="${esc(t.bugIds)}" placeholder="e.g. BUG-1021, BUG-1022…" oninput="setTaskField(${t.id},'bugIds',this.value)"/></div>
+          </div>
+        </div>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+function renderTable(){
+  const body=$id('summaryBody'), empty=$id('tableEmpty');
+  body.innerHTML='';
+  if(!tasks.length){ empty.style.display='block'; $id('summaryTable').style.display='none'; return; }
+  empty.style.display='none'; $id('summaryTable').style.display='';
+  tasks.forEach((t,i)=>{
+    const isFail=t.taskStatus==='fail';
+    const tr=document.createElement('tr');
+    tr.style.background=i%2===0?'#fff':'#fafbfc';
+    const jiraCell=isFail&&t.jiraLink?`<a href="${esc(t.jiraLink)}" target="_blank" style="color:#2563eb;font-size:11.5px;font-weight:600;font-family:'JetBrains Mono',monospace">Open ↗</a>`:'<span style="color:#9ca3af">—</span>';
+    const issueCell=isFail&&t.issueId?`<span style="color:#dc2626;font-weight:700;font-family:'JetBrains Mono',monospace;font-size:11.5px">${esc(t.issueId)}</span>`:'<span style="color:#9ca3af">—</span>';
+    const defectCell=t.gameMode&&t.defects?`<span style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700;font-family:'JetBrains Mono',monospace;background:#fff1f2;color:#9333ea">${t.defects}</span>`:'<span style="color:#9ca3af">—</span>';
+    tr.innerHTML=`
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f3f5;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#9ca3af">${i+1}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f3f5;font-weight:600;font-size:13px">${esc(t.name)||'<span style="color:#9ca3af">Untitled</span>'}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f3f5;color:#6b7280;font-size:13px">${esc(t.taskType)||'—'}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f3f5"><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:.4px;background:${t.type==='half'?'#eff6ff':'#f0fdf4'};color:${t.type==='half'?'#2563eb':'#16a34a'}">${t.type==='half'?'HALF':'FULL'}</span></td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f3f5">${t.progress==='completed'?'<span style="display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700;font-family:JetBrains Mono,monospace;background:#f0fdf4;color:#16a34a">✅ Completed</span>':'<span style="display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700;font-family:JetBrains Mono,monospace;background:#fffbeb;color:#d97706">🔄 In Progress</span>'}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f3f5">${isFail?'<span style="display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700;font-family:JetBrains Mono,monospace;background:#fff1f2;color:#dc2626">❌ Fail</span>':'<span style="display:inline-flex;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700;font-family:JetBrains Mono,monospace;background:#f0fdf4;color:#16a34a">✅ Pass</span>'}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f3f5">${issueCell}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f3f5">${jiraCell}</td>
+      <td style="padding:9px 12px;border-bottom:1px solid #f1f3f5">${defectCell}</td>`;
+    body.appendChild(tr);
+  });
+}
+
+function recalc(){
+  $id('kpiTotal').textContent=tasks.length;
+  $id('kpiCompleted').textContent=tasks.filter(t=>t.progress==='completed').length;
+  $id('kpiInProg').textContent=tasks.filter(t=>t.progress==='inprogress').length;
+  $id('kpiFailed').textContent=tasks.filter(t=>t.taskStatus==='fail').length;
+  $id('kpiDefects').textContent=tasks.reduce((s,t)=>s+(parseInt(t.defects)||0),0);
+}
+
+// ────────────────────────────────────────────────────
+// ACTIONS
+// ────────────────────────────────────────────────────
+async function resetAll(){
+  if(!confirm('Reset ALL report data? This will clear the shared dashboard.')) return;
+  tasks=[]; taskIdCtr=0;
+  $id('reportDate').value=todayStr();
+  ['testerName','execTime','observations','tomorrowPlan'].forEach(id=>$id(id).value='');
+  syncTester(); renderAll(); autoSave();
+  showToast('Report reset.');
+}
+
+function exportJSON(){
+  const data={exportedAt:new Date().toISOString(),reportDate:$id('reportDate').value,testerName:$id('testerName').value,execTime:$id('execTime').value,observations:$id('observations').value,tomorrowPlan:$id('tomorrowPlan').value,tasks,summary:{total:tasks.length,completed:tasks.filter(t=>t.progress==='completed').length,inProgress:tasks.filter(t=>t.progress==='inprogress').length,failed:tasks.filter(t=>t.taskStatus==='fail').length,defects:tasks.reduce((s,t)=>s+(parseInt(t.defects)||0),0)}};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  const date=($id('reportDate').value||todayStr()).replace(/-/g,'');
+  const name=($id('testerName').value||'tester').replace(/\s+/g,'-').toLowerCase();
+  a.download=`ios-report-${name}-${date}.json`;a.click();
+  showToast('Exported as JSON ✓');
+}
+
+// ────────────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', ()=>{
+  $id('reportDate').value = todayStr();
+  setSyncLabel('Not signed in', false);
+
+  // If share link with no auth, prompt sign-in or view-only
+  const shareId = new URLSearchParams(window.location.search).get('share');
+  if(shareId){
+    // Show auth overlay with view-only option visible
+    $id('authOverlay').style.display='flex';
+  }
+
+  // Close share modal on backdrop click
+  $id('shareModal').addEventListener('click', e=>{ if(e.target===$id('shareModal')) closeShareModal(); });
+});
+</script>
+</body>
+</html>
